@@ -1,0 +1,17 @@
+{
+    "name": "KodachiGames.Data",
+    "rootNamespace": "KodachiGames.Data",
+    "references": [
+        "KodachiGames.Persistence",
+        "UnityServiceLocator"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

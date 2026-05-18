@@ -2,19 +2,21 @@ namespace KodachiGames.Data
 {
     public class DataContext
     {
-        public string ProfileId { get; private set; }
-        public string MatchId { get; private set; }
+        public const string DefaultProfileId = "default";
+        public const string DefaultSessionId = "default";
+
+        public string ProfileId { get; private set; } = DefaultProfileId;
+        public string SessionId { get; private set; } = DefaultSessionId;
 
         public void SetProfile(string profileId) => ProfileId = profileId;
-        public void SetMatch(string matchId) => MatchId = matchId;
-        public void ClearMatch() => MatchId = null;
+        public void SetSession(string sessionId) => SessionId = sessionId;
+        public void ClearSession() => SessionId = null;
 
-        // Index keys — profile-independent
         public string ProfileIndexKey => "profiles/index";
-        public string MatchIndexKey => $"profiles/{ProfileId}/matches/index";
-
-        // Data keys
-        public string MetaKey(string key) => $"profiles/{ProfileId}/meta/{key}";
-        public string GameDataKey => $"profiles/{ProfileId}/matches/{MatchId}";
+        public string ProfileDataIndexKey => $"profiles/{ProfileId}/profile-data/index";
+        public string SessionIndexKey => $"profiles/{ProfileId}/sessions/index";
+        public string ProfileDataKey(string key) => $"profiles/{ProfileId}/profile-data/{key}";
+        public string SessionDataKey(string sessionId) => $"profiles/{ProfileId}/sessions/{sessionId}";
+        public string DeviceKey(string key) => $"device/{key}";
     }
 }

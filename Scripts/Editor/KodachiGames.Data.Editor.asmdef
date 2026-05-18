@@ -2,7 +2,9 @@
     "name": "KodachiGames.Data.Editor",
     "rootNamespace": "KodachiGames.Data.Editor",
     "references": [
-        "KodachiGames.Data"
+        "KodachiGames.Data",
+        "KodachiGames.Persistence",
+        "UnityServiceLocator"
     ],
     "includePlatforms": [
         "Editor"

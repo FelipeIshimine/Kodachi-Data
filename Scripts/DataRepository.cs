@@ -154,12 +154,14 @@ namespace KodachiGames.Data
 
         public void SaveProfileData<T>(string key, T data) where T : ISaveData
         {
+            EnsureActiveProfileTracked();
             TrackProfileDataKey(key);
             WriteVersioned(_context.ProfileDataKey(key), data);
         }
 
         public async Awaitable SaveProfileDataAsync<T>(string key, T data, CancellationToken ct = default) where T : ISaveData
         {
+            await EnsureActiveProfileTrackedAsync(ct);
             await TrackProfileDataKeyAsync(key, ct);
             await WriteVersionedAsync(_context.ProfileDataKey(key), data, ct);
         }
@@ -176,12 +178,14 @@ namespace KodachiGames.Data
 
         public void SaveSessionData<T>(T data) where T : ISaveData
         {
+            EnsureActiveProfileTracked();
             TrackSessionId(_context.SessionId);
             WriteVersioned(_context.SessionDataKey(_context.SessionId), data);
         }
 
         public async Awaitable SaveSessionDataAsync<T>(T data, CancellationToken ct = default) where T : ISaveData
         {
+            await EnsureActiveProfileTrackedAsync(ct);
             await TrackSessionIdAsync(_context.SessionId, ct);
             await WriteVersionedAsync(_context.SessionDataKey(_context.SessionId), data, ct);
         }
@@ -267,6 +271,24 @@ namespace KodachiGames.Data
         }
 
         // --- Index tracking (internal) ---
+
+        // Any write to the active profile registers that profile in the index, so it is
+        // discoverable (e.g. by the Data Browser) without an explicit UseProfile/CreateProfile call.
+        void EnsureActiveProfileTracked()
+        {
+            var index = GetProfiles();
+            if (index.Contains(_context.ProfileId)) return;
+            index.Add(_context.ProfileId);
+            _backend.Save(_context.ProfileIndexKey, index);
+        }
+
+        async Awaitable EnsureActiveProfileTrackedAsync(CancellationToken ct)
+        {
+            var index = await GetProfilesAsync(ct);
+            if (index.Contains(_context.ProfileId)) return;
+            index.Add(_context.ProfileId);
+            await _backend.SaveAsync(_context.ProfileIndexKey, index, ct);
+        }
 
         ProfileDataIndex GetProfileDataIndex()
         {

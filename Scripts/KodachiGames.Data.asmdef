@@ -3,7 +3,8 @@
     "rootNamespace": "KodachiGames.Data",
     "references": [
         "KodachiGames.Persistence",
-        "UnityServiceLocator"
+        "UnityServiceLocator",
+        "SelectorAttributes"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -26,13 +26,22 @@ The split between ProfileData and SessionData: ProfileData persists across all s
 | `ISaveData` | Marker interface. Every type passed to `SaveProfileData` / `LoadProfileData` / `SaveSessionData` / `SaveDeviceData` / etc. must implement it. |
 | `MigrationRegistry` | Internal. Discovers `Vn` nested classes and `MigrateFrom` methods via reflection. Walks the chain on load. |
 | `ProfileIndex` / `SessionIndex` / `ProfileDataIndex` | Plain serializable index objects, auto-maintained by the repository so it can list and clean up without backend enumeration support. |
-| `DataServiceInstaller` | MonoBehaviour that wires `DataContext` + `DataRepository` to the ServiceLocator. |
+| `DataServiceInstaller` | MonoBehaviour that wires `DataContext` + `DataRepository` to the ServiceLocator. Resolves an existing `IPersistenceBackend`, or — if you assign one on the component — registers and owns it (single-component setup). |
 
 ## Quick start
 
-1. Add a `PersistenceServiceInstaller` to your global ServiceLocator GameObject (from the Persistence package).
-2. Add a `DataServiceInstaller` to the same GameObject (or a child).
-3. Define a save bag that implements `ISaveData`:
+There are two ways to wire the services, depending on whether other systems also need the backend:
+
+**A. Single component (Data-only projects).** Add one `DataServiceInstaller` and assign a backend in its `Backend` field (a `[TypeSelector]` dropdown). It registers the backend, `DataContext`, and `DataRepository` together — nothing to order, nothing else to add.
+
+**B. Shared backend (when Economy / Progression / etc. also persist).** Add a `PersistenceServiceInstaller` (from the Persistence package) to register the `IPersistenceBackend`, then add a `DataServiceInstaller` and **leave its `Backend` field empty** — it will resolve the shared backend. The persistence installer runs first via execution order, so all consumers see the same backend.
+
+If no backend is registered and none is assigned, `DataServiceInstaller` logs a clear error instead of throwing.
+
+Then:
+
+1. Wire the services using approach A or B above.
+2. Define a save bag that implements `ISaveData`:
 
 ```csharp
 [Serializable]
@@ -43,7 +52,7 @@ public class WalletSave : ISaveData
 }
 ```
 
-4. Resolve `DataRepository` from anywhere:
+3. Resolve `DataRepository` from anywhere:
 
 ```csharp
 ServiceLocator.For(this).Get<DataRepository>(out var data);
@@ -199,6 +208,8 @@ The package has no `SessionData<T>` / `ProfileData<T>` base class. Your saved da
 ## Editor browser
 
 `Window → Kodachi → Data Browser` opens a window listing all profiles, their profile data keys, and their session slots. Each entry shows the stored version (e.g. `wallet (v2)`). Click any entry to inspect its serialized value.
+
+Any write to a profile auto-registers that profile in the profile index, so it shows up in the browser without an explicit `UseProfile`/`CreateProfile` call. This includes the implicit `"default"` profile in the single-profile case — just save once (in Play Mode) and hit **Refresh**.
 
 DeviceData is not shown — there's no index for it (by design). Inspect device keys directly with the persistence backend if needed.
 

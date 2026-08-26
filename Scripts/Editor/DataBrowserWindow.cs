@@ -1,3 +1,5 @@
+using System;
+using System.Threading;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -60,7 +62,24 @@ namespace KodachiGames.Data.Editor
             Refresh();
         }
 
-        void Refresh()
+        async void RefreshAsync()
+        {
+            try
+            {
+                await RefreshInternalAsync();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        void Refresh() => RefreshAsync();
+
+        async Awaitable RefreshInternalAsync()
         {
             _treePane.Clear();
             _valuePane.value = string.Empty;
@@ -79,7 +98,7 @@ namespace KodachiGames.Data.Editor
 
             _statusLabel.text = string.Empty;
 
-            var profiles = _repo.GetProfiles();
+            var profiles = await _repo.GetProfilesAsync();
             if (profiles.ProfileIds.Count == 0)
             {
                 _treePane.Add(new Label("(no profiles)") { style = { color = new Color(1, 1, 1, 0.5f) } });
@@ -97,28 +116,28 @@ namespace KodachiGames.Data.Editor
                 var profileDataHeader = new Label("Profile Data") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 4 } };
                 foldout.Add(profileDataHeader);
 
-                var profileDataIndex = LoadProfileDataIndex();
+                var profileDataIndex = await LoadProfileDataIndexAsync();
                 if (profileDataIndex.Keys.Count == 0)
                     foldout.Add(MutedLabel("  (none)"));
                 else
                     foreach (var k in profileDataIndex.Keys)
                     {
                         var fullKey = _context.ProfileDataKey(k);
-                        foldout.Add(KeyButton($"  {k}{VersionSuffix(fullKey)}", fullKey));
+                        foldout.Add(KeyButton($"  {k}{await VersionSuffixAsync(fullKey)}", fullKey));
                     }
 
                 // Sessions
                 var sessionHeader = new Label("Sessions") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 6 } };
                 foldout.Add(sessionHeader);
 
-                var sessionIndex = _repo.GetSessions();
+                var sessionIndex = await _repo.GetSessionsAsync();
                 if (sessionIndex.SessionIds.Count == 0)
                     foldout.Add(MutedLabel("  (none)"));
                 else
                     foreach (var s in sessionIndex.SessionIds)
                     {
                         var fullKey = _context.SessionDataKey(s);
-                        foldout.Add(KeyButton($"  {s}{VersionSuffix(fullKey)}", fullKey));
+                        foldout.Add(KeyButton($"  {s}{await VersionSuffixAsync(fullKey)}", fullKey));
                     }
 
                 _treePane.Add(foldout);
@@ -142,10 +161,10 @@ namespace KodachiGames.Data.Editor
             return _repo != null && _backend != null && _context != null;
         }
 
-        ProfileDataIndex LoadProfileDataIndex()
+        async Awaitable<ProfileDataIndex> LoadProfileDataIndexAsync()
         {
-            return _backend.Exists(_context.ProfileDataIndexKey)
-                ? _backend.Load<ProfileDataIndex>(_context.ProfileDataIndexKey)
+            return await _backend.ExistsAsync(_context.ProfileDataIndexKey)
+                ? await _backend.LoadAsync<ProfileDataIndex>(_context.ProfileDataIndexKey)
                 : new ProfileDataIndex();
         }
 
@@ -164,23 +183,33 @@ namespace KodachiGames.Data.Editor
             return btn;
         }
 
-        void ShowValue(string fullKey)
+        async void ShowValue(string fullKey)
         {
-            if (!_backend.Exists(fullKey))
+            try
             {
-                _valuePane.value = "(not found)";
-                return;
-            }
+                if (!await _backend.ExistsAsync(fullKey))
+                {
+                    _valuePane.value = "(not found)";
+                    return;
+                }
 
-            var obj = _backend.Load<object>(fullKey);
-            _valuePane.value = obj?.ToString() ?? "(null)";
+                var obj = await _backend.LoadAsync<object>(fullKey);
+                _valuePane.value = obj?.ToString() ?? "(null)";
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
 
-        string VersionSuffix(string fullKey)
+        async Awaitable<string> VersionSuffixAsync(string fullKey)
         {
             var versionKey = fullKey + "/__version";
-            if (!_backend.Exists(versionKey)) return "  (unversioned)";
-            var v = _backend.Load<int>(versionKey);
+            if (!await _backend.ExistsAsync(versionKey)) return "  (unversioned)";
+            var v = await _backend.LoadAsync<int>(versionKey);
             return $"  (v{v})";
         }
 

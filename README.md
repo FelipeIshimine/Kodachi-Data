@@ -23,7 +23,7 @@ The split between ProfileData and SessionData: ProfileData persists across all s
 |---|---|
 | `DataRepository` | The only type consumers reference. Save/load/delete for profile, session, and device data. |
 | `DataContext` | Holds current profile and session IDs. Builds all persistence keys. |
-| `ISaveData` | Marker interface. Every type passed to `SaveProfileData` / `LoadProfileData` / `SaveSessionData` / `SaveDeviceData` / etc. must implement it. |
+| `ISaveData` | Marker interface. Every type passed to `SaveProfileDataAsync` / `LoadProfileDataAsync` / `SaveSessionDataAsync` / `SaveDeviceDataAsync` / etc. must implement it. |
 | `MigrationRegistry` | Internal. Discovers `Vn` nested classes and `MigrateFrom` methods via reflection. Walks the chain on load. |
 | `ProfileIndex` / `SessionIndex` / `ProfileDataIndex` | Plain serializable index objects, auto-maintained by the repository so it can list and clean up without backend enumeration support. |
 | `DataServiceInstaller` | MonoBehaviour that wires `DataContext` + `DataRepository` to the ServiceLocator. Resolves an existing `IPersistenceBackend`, or — if you assign one on the component — registers and owns it (single-component setup). |
@@ -58,13 +58,13 @@ public class WalletSave : ISaveData
 ServiceLocator.For(this).Get<DataRepository>(out var data);
 
 // Single-profile case — zero setup needed. Defaults to profile "default", session "default".
-data.SaveProfileData("wallet", new WalletSave { Gold = 500 });
-data.SaveSessionData(new SessionState { Level = 3 });
-data.SaveDeviceData("graphics", new GraphicsConfig { ... });
+await data.SaveProfileDataAsync("wallet", new WalletSave { Gold = 500 });
+await data.SaveSessionDataAsync(new SessionState { Level = 3 });
+await data.SaveDeviceDataAsync("graphics", new GraphicsConfig { ... });
 
 // Loading
-var wallet = data.LoadProfileData<WalletSave>("wallet");
-var state  = data.LoadSessionData<SessionState>();
+var wallet = await data.LoadProfileDataAsync<WalletSave>("wallet");
+var state  = await data.LoadSessionDataAsync<SessionState>();
 ```
 
 ## Multi-profile and multi-session
@@ -99,11 +99,11 @@ public class LastProfileSave : ISaveData { public string Id; }
 const string LastProfileKey = "last-profile";
 
 // On save:
-data.SaveDeviceData(LastProfileKey, new LastProfileSave { Id = "alice" });
+await data.SaveDeviceDataAsync(LastProfileKey, new LastProfileSave { Id = "alice" });
 
 // On startup:
-if (data.DeviceDataExists(LastProfileKey))
-    await data.UseProfileAsync(data.LoadDeviceData<LastProfileSave>(LastProfileKey).Id);
+if (await data.DeviceDataExistsAsync(LastProfileKey))
+    await data.UseProfileAsync((await data.LoadDeviceDataAsync<LastProfileSave>(LastProfileKey)).Id);
 ```
 
 ## Versioning and migrations

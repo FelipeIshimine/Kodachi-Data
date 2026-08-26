@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using UnityEngine;
 using KodachiGames.Persistence;
 
 namespace KodachiGames.Data
@@ -86,19 +88,21 @@ namespace KodachiGames.Data
             _migrators = migrators;
         }
 
+        static readonly MethodInfo LoadTypedOpenGeneric = typeof(TypeMigrationInfo)
+            .GetMethod(nameof(LoadTypedAsync), BindingFlags.NonPublic | BindingFlags.Static);
+
+        static async Awaitable<object> LoadTypedAsync<T>(IPersistenceBackend backend, string key, CancellationToken ct)
+            => await backend.LoadAsync<T>(key, ct);
+
         // Loads the blob as the stored version type, then walks the chain up to current.
-        internal object LoadAndMigrate(IPersistenceBackend backend, string key, int storedVersion)
+        internal async Awaitable<object> LoadAndMigrateAsync(IPersistenceBackend backend, string key, int storedVersion, CancellationToken ct)
         {
             var storedType = storedVersion == CurrentVersion
                 ? _currentType
                 : _versionedTypes[storedVersion];
 
-            // Invoke backend.Load<StoredType>(key) via reflection
-            var loadMethod = typeof(IPersistenceBackend)
-                .GetMethod(nameof(IPersistenceBackend.Load))
-                .MakeGenericMethod(storedType);
-
-            var data = loadMethod.Invoke(backend, new object[] { key });
+            var loadMethod = LoadTypedOpenGeneric.MakeGenericMethod(storedType);
+            var data = await (Awaitable<object>)loadMethod.Invoke(null, new object[] { backend, key, ct });
 
             // Walk the chain: V1 → V2 → ... → current
             for (int v = storedVersion; v < CurrentVersion; v++)

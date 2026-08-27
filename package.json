@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "displayName": "Kodachi Data",
   "description": "Typed data management layer. Defines DesignData, GameData, and MetaData categories. Manages profile and match addressing via explicit index objects on top of Kodachi Persistence.",
-  "unity": "6000.0",
+  "unity": "6000.5",
   "author": {
     "name": "Kodachi Games"
   },

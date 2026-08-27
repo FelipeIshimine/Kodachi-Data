@@ -161,7 +161,7 @@ namespace KodachiGames.Data
         {
             var info = MigrationRegistry.Get(typeof(T));
             await _backend.SaveAsync(key, data, ct);
-            await _backend.SaveAsync(key + VersionSuffix, info.CurrentVersion, ct);
+            await _backend.SaveAsync(key + VersionSuffix, new VersionEnvelope { Version = info.CurrentVersion }, ct);
         }
 
         async Awaitable<T> ReadVersionedAsync<T>(string key, CancellationToken ct)
@@ -172,12 +172,18 @@ namespace KodachiGames.Data
             if (!await _backend.ExistsAsync(versionKey, ct))
                 return await _backend.LoadAsync<T>(key, ct);
 
-            var storedVersion = await _backend.LoadAsync<int>(versionKey, ct);
+            var storedVersion = (await _backend.LoadAsync<VersionEnvelope>(versionKey, ct)).Version;
 
             if (storedVersion == info.CurrentVersion)
                 return await _backend.LoadAsync<T>(key, ct);
 
             return (T)await info.LoadAndMigrateAsync(_backend, key, storedVersion, ct);
+        }
+
+        [System.Serializable]
+        private class VersionEnvelope
+        {
+            public int Version;
         }
 
         // --- Index tracking (internal) ---

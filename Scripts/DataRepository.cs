@@ -169,15 +169,27 @@ namespace KodachiGames.Data
             var info = MigrationRegistry.Get(typeof(T));
             var versionKey = key + VersionSuffix;
 
-            if (!await _backend.ExistsAsync(versionKey, ct))
-                return await _backend.LoadAsync<T>(key, ct);
+            try
+            {
+                if (!await _backend.ExistsAsync(versionKey, ct))
+                    return await _backend.LoadAsync<T>(key, ct);
 
-            var storedVersion = (await _backend.LoadAsync<VersionEnvelope>(versionKey, ct)).Version;
+                var storedVersion = (await _backend.LoadAsync<VersionEnvelope>(versionKey, ct)).Version;
 
-            if (storedVersion == info.CurrentVersion)
-                return await _backend.LoadAsync<T>(key, ct);
+                if (storedVersion == info.CurrentVersion)
+                    return await _backend.LoadAsync<T>(key, ct);
 
-            return (T)await info.LoadAndMigrateAsync(_backend, key, storedVersion, ct);
+                return (T)await info.LoadAndMigrateAsync(_backend, key, storedVersion, ct);
+            }
+            catch (System.ArgumentException e)
+            {
+                Debug.LogWarning(
+                    $"[DataRepository] '{key}' could not be deserialized ({e.Message}). The record is " +
+                    "corrupt or predates the JSON-serializer migration; discarding it and starting fresh.");
+                await _backend.DeleteAsync(key, ct);
+                await _backend.DeleteAsync(versionKey, ct);
+                return default;
+            }
         }
 
         [System.Serializable]

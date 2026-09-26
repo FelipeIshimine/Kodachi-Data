@@ -47,6 +47,8 @@ namespace KodachiGames.Data
 
         void OnDestroy()
         {
+            if (ServiceLocator.IsShuttingDown) return;
+
             var services = ServiceLocator.For(this);
 
             if (_repository != null) services.Unregister<DataRepository>();

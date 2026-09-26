@@ -209,7 +209,7 @@ The package has no `SessionData<T>` / `ProfileData<T>` base class. Your saved da
 
 `Window → Kodachi → Data Browser` opens a window listing all profiles, their profile data keys, and their session slots. Each entry shows the stored version (e.g. `wallet (v2)`). Click any entry to inspect its serialized value.
 
-Any write to a profile auto-registers that profile in the profile index, so it shows up in the browser without an explicit `UseProfile`/`CreateProfile` call. This includes the implicit `"default"` profile in the single-profile case — just save once (in Play Mode) and hit **Refresh**.
+Any write to a profile auto-registers that profile in the profile index, so it shows up in the browser without an explicit `UseProfileAsync`/`CreateProfileAsync` call. This includes the implicit `"default"` profile in the single-profile case — just save once (in Play Mode) and hit **Refresh**.
 
 DeviceData is not shown — there's no index for it (by design). Inspect device keys directly with the persistence backend if needed.
 

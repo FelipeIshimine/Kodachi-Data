@@ -8,6 +8,7 @@
     "name": "Kodachi Games"
   },
   "dependencies": {
-    "com.kodachigames.persistence": "0.1.0"
+    "com.kodachigames.persistence": "0.1.0",
+    "com.kodachigames.markdown": "0.1.0"
   }
 }

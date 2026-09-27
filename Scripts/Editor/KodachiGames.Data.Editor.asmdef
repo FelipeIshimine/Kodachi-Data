@@ -4,7 +4,8 @@
     "references": [
         "KodachiGames.Data",
         "KodachiGames.Persistence",
-        "UnityServiceLocator"
+        "UnityServiceLocator",
+        "KodachiGames.Markdown.Editor"
     ],
     "includePlatforms": [
         "Editor"

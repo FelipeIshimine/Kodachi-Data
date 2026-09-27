@@ -1,3 +1,4 @@
+using KodachiGames.Markdown.Editor;
 using System;
 using System.Threading;
 using UnityEditor;
@@ -41,6 +42,8 @@ namespace KodachiGames.Data.Editor
 
             _statusLabel = new Label { style = { marginLeft = 12, unityTextAlign = TextAnchor.MiddleLeft } };
             toolbar.Add(_statusLabel);
+            toolbar.Add(new VisualElement { style = { flexGrow = 1 } });
+            toolbar.Add(WindowGuide.Button(typeof(DataBrowserWindow), "data-browser"));
             root.Add(toolbar);
 
             // Split view

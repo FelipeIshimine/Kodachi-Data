@@ -9,14 +9,17 @@ namespace KodachiGames.Data
         const string VersionSuffix = "/__version";
 
         readonly IPersistenceBackend _backend;
+        readonly ISaveFormat _format;
         readonly DataContext _context;
 
         public DataContext Context => _context;
+        public ISaveFormat Format => _format;
 
-        public DataRepository(IPersistenceBackend backend, DataContext context)
+        public DataRepository(IPersistenceBackend backend, ISaveFormat format, DataContext context)
         {
-            _backend = backend;
-            _context = context;
+            _backend = backend ?? throw new System.ArgumentNullException(nameof(backend));
+            _format = format ?? throw new System.ArgumentNullException(nameof(format));
+            _context = context ?? throw new System.ArgumentNullException(nameof(context));
         }
 
         // --- Profiles ---
@@ -25,7 +28,7 @@ namespace KodachiGames.Data
         {
             if (!await _backend.ExistsAsync(_context.ProfileIndexKey, ct))
                 return new ProfileIndex();
-            return await _backend.LoadAsync<ProfileIndex>(_context.ProfileIndexKey, ct);
+            return await ReadAsync<ProfileIndex>(_context.ProfileIndexKey, ct);
         }
 
         public async Awaitable CreateProfileAsync(string profileId, CancellationToken ct = default)
@@ -33,7 +36,7 @@ namespace KodachiGames.Data
             var index = await GetProfilesAsync(ct);
             if (index.Contains(profileId)) return;
             index.Add(profileId);
-            await _backend.SaveAsync(_context.ProfileIndexKey, index, ct);
+            await WriteAsync(_context.ProfileIndexKey, index, ct);
         }
 
         public async Awaitable UseProfileAsync(string profileId, CancellationToken ct = default)
@@ -69,7 +72,7 @@ namespace KodachiGames.Data
 
             var profileIndex = await GetProfilesAsync(ct);
             profileIndex.Remove(profileId);
-            await _backend.SaveAsync(_context.ProfileIndexKey, profileIndex, ct);
+            await WriteAsync(_context.ProfileIndexKey, profileIndex, ct);
         }
 
         // --- Sessions ---
@@ -78,7 +81,7 @@ namespace KodachiGames.Data
         {
             if (!await _backend.ExistsAsync(_context.SessionIndexKey, ct))
                 return new SessionIndex();
-            return await _backend.LoadAsync<SessionIndex>(_context.SessionIndexKey, ct);
+            return await ReadAsync<SessionIndex>(_context.SessionIndexKey, ct);
         }
 
         public async Awaitable CreateSessionAsync(string sessionId, CancellationToken ct = default)
@@ -86,7 +89,7 @@ namespace KodachiGames.Data
             var index = await GetSessionsAsync(ct);
             if (index.Contains(sessionId)) return;
             index.Add(sessionId);
-            await _backend.SaveAsync(_context.SessionIndexKey, index, ct);
+            await WriteAsync(_context.SessionIndexKey, index, ct);
         }
 
         public async Awaitable UseSessionAsync(string sessionId, CancellationToken ct = default)
@@ -105,7 +108,7 @@ namespace KodachiGames.Data
 
             var index = await GetSessionsAsync(ct);
             index.Remove(sessionId);
-            await _backend.SaveAsync(_context.SessionIndexKey, index, ct);
+            await WriteAsync(_context.SessionIndexKey, index, ct);
         }
 
         // --- ProfileData ---
@@ -122,6 +125,16 @@ namespace KodachiGames.Data
 
         public async Awaitable<bool> ProfileDataExistsAsync(string key, CancellationToken ct = default)
             => await _backend.ExistsAsync(_context.ProfileDataKey(key), ct);
+
+        public async Awaitable SaveProfileBytesAsync(string key, byte[] data, CancellationToken ct = default)
+        {
+            await EnsureActiveProfileTrackedAsync(ct);
+            await TrackProfileDataKeyAsync(key, ct);
+            await _backend.WriteAsync(_context.ProfileDataKey(key), data, ct);
+        }
+
+        public async Awaitable<byte[]> LoadProfileBytesAsync(string key, CancellationToken ct = default)
+            => await _backend.ReadAsync(_context.ProfileDataKey(key), ct);
 
         // --- SessionData ---
 
@@ -160,8 +173,8 @@ namespace KodachiGames.Data
         async Awaitable WriteVersionedAsync<T>(string key, T data, CancellationToken ct)
         {
             var info = MigrationRegistry.Get(typeof(T));
-            await _backend.SaveAsync(key, data, ct);
-            await _backend.SaveAsync(key + VersionSuffix, new VersionEnvelope { Version = info.CurrentVersion }, ct);
+            await WriteAsync(key, data, ct);
+            await WriteAsync(key + VersionSuffix, new VersionEnvelope { Version = info.CurrentVersion }, ct);
         }
 
         async Awaitable<T> ReadVersionedAsync<T>(string key, CancellationToken ct)
@@ -172,14 +185,14 @@ namespace KodachiGames.Data
             try
             {
                 if (!await _backend.ExistsAsync(versionKey, ct))
-                    return await _backend.LoadAsync<T>(key, ct);
+                    return await ReadAsync<T>(key, ct);
 
-                var storedVersion = (await _backend.LoadAsync<VersionEnvelope>(versionKey, ct)).Version;
+                var storedVersion = (await ReadAsync<VersionEnvelope>(versionKey, ct)).Version;
 
                 if (storedVersion == info.CurrentVersion)
-                    return await _backend.LoadAsync<T>(key, ct);
+                    return await ReadAsync<T>(key, ct);
 
-                return (T)await info.LoadAndMigrateAsync(_backend, key, storedVersion, ct);
+                return (T)info.Migrate(_format.Deserialize(await _backend.ReadAsync(key, ct), info.TypeOf(storedVersion)), storedVersion);
             }
             catch (System.ArgumentException e)
             {
@@ -191,6 +204,12 @@ namespace KodachiGames.Data
                 return default;
             }
         }
+
+        async Awaitable<T> ReadAsync<T>(string key, CancellationToken ct)
+            => (T)_format.Deserialize(await _backend.ReadAsync(key, ct), typeof(T));
+
+        async Awaitable WriteAsync<T>(string key, T data, CancellationToken ct)
+            => await _backend.WriteAsync(key, _format.Serialize(data), ct);
 
         [System.Serializable]
         private class VersionEnvelope
@@ -205,14 +224,14 @@ namespace KodachiGames.Data
             var index = await GetProfilesAsync(ct);
             if (index.Contains(_context.ProfileId)) return;
             index.Add(_context.ProfileId);
-            await _backend.SaveAsync(_context.ProfileIndexKey, index, ct);
+            await WriteAsync(_context.ProfileIndexKey, index, ct);
         }
 
         public async Awaitable<ProfileDataIndex> GetProfileDataIndexAsync(CancellationToken ct = default)
         {
             if (!await _backend.ExistsAsync(_context.ProfileDataIndexKey, ct))
                 return new ProfileDataIndex();
-            return await _backend.LoadAsync<ProfileDataIndex>(_context.ProfileDataIndexKey, ct);
+            return await ReadAsync<ProfileDataIndex>(_context.ProfileDataIndexKey, ct);
         }
 
         async Awaitable TrackProfileDataKeyAsync(string key, CancellationToken ct)
@@ -220,7 +239,7 @@ namespace KodachiGames.Data
             var index = await GetProfileDataIndexAsync(ct);
             if (index.Contains(key)) return;
             index.Add(key);
-            await _backend.SaveAsync(_context.ProfileDataIndexKey, index, ct);
+            await WriteAsync(_context.ProfileDataIndexKey, index, ct);
         }
 
         async Awaitable TrackSessionIdAsync(string sessionId, CancellationToken ct)
@@ -228,7 +247,7 @@ namespace KodachiGames.Data
             var index = await GetSessionsAsync(ct);
             if (index.Contains(sessionId)) return;
             index.Add(sessionId);
-            await _backend.SaveAsync(_context.SessionIndexKey, index, ct);
+            await WriteAsync(_context.SessionIndexKey, index, ct);
         }
     }
 }

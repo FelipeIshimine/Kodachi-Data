@@ -14,6 +14,10 @@ namespace KodachiGames.Data
         [SerializeReference, TypeSelector]
         private IPersistenceBackend backend;
 
+        [Tooltip("How saved objects become bytes. JSON by default; add your own ISaveFormat to extend.")]
+        [SerializeReference, TypeSelector]
+        private ISaveFormat format = new JsonSaveFormat();
+
         private bool _ownsBackend;
         private DataContext _context;
         private DataRepository _repository;
@@ -39,7 +43,7 @@ namespace KodachiGames.Data
             }
 
             _context = new DataContext();
-            _repository = new DataRepository(resolved, _context);
+            _repository = new DataRepository(resolved, format, _context);
 
             services.Register(_context);
             services.Register(_repository);

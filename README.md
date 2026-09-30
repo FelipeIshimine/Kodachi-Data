@@ -26,7 +26,9 @@ The split between ProfileData and SessionData: ProfileData persists across all s
 | `ISaveData` | Marker interface. Every type passed to `SaveProfileDataAsync` / `LoadProfileDataAsync` / `SaveSessionDataAsync` / `SaveDeviceDataAsync` / etc. must implement it. |
 | `MigrationRegistry` | Internal. Discovers `Vn` nested classes and `MigrateFrom` methods via reflection. Walks the chain on load. |
 | `ProfileIndex` / `SessionIndex` / `ProfileDataIndex` | Plain serializable index objects, auto-maintained by the repository so it can list and clean up without backend enumeration support. |
-| `DataServiceInstaller` | MonoBehaviour that wires `DataContext` + `DataRepository` to the ServiceLocator. Resolves an existing `IPersistenceBackend`, or — if you assign one on the component — registers and owns it (single-component setup). |
+| `ISaveFormat` | Turns a save object into bytes and back (`Serialize(object)` / `Deserialize(byte[], Type)`). The backend only stores the bytes. |
+| `JsonSaveFormat` | The default format: `JsonUtility` text as UTF-8. Implement `ISaveFormat` (mark it `[Serializable]`, add `[SelectorName("Formats/...")]`) to add your own; it appears in the installer's **Format** dropdown. |
+| `DataServiceInstaller` | MonoBehaviour that wires `DataContext` + `DataRepository` (with the chosen **Format**, JSON by default) to the ServiceLocator. Resolves an existing `IPersistenceBackend`, or — if you assign one on the component — registers and owns it (single-component setup). |
 
 ## Quick start
 

@@ -166,9 +166,7 @@ namespace KodachiGames.Data.Editor
 
         async Awaitable<ProfileDataIndex> LoadProfileDataIndexAsync()
         {
-            return await _backend.ExistsAsync(_context.ProfileDataIndexKey)
-                ? await _backend.LoadAsync<ProfileDataIndex>(_context.ProfileDataIndexKey)
-                : new ProfileDataIndex();
+            return await _repo.GetProfileDataIndexAsync();
         }
 
         Button KeyButton(string label, string fullKey)
@@ -196,8 +194,7 @@ namespace KodachiGames.Data.Editor
                     return;
                 }
 
-                var obj = await _backend.LoadAsync<object>(fullKey);
-                _valuePane.value = obj?.ToString() ?? "(null)";
+                _valuePane.value = Describe(await _backend.ReadAsync(fullKey));
             }
             catch (OperationCanceledException)
             {
@@ -212,9 +209,13 @@ namespace KodachiGames.Data.Editor
         {
             var versionKey = fullKey + "/__version";
             if (!await _backend.ExistsAsync(versionKey)) return "  (unversioned)";
-            var v = await _backend.LoadAsync<int>(versionKey);
-            return $"  (v{v})";
+            return $"  ({Describe(await _backend.ReadAsync(versionKey))})";
         }
+
+        string Describe(byte[] bytes) =>
+            _repo.Format is JsonSaveFormat
+                ? System.Text.Encoding.UTF8.GetString(bytes)
+                : $"{bytes.Length} bytes ({_repo.Format.GetType().Name})";
 
         static Label MutedLabel(string text) =>
             new(text) { style = { color = new Color(1, 1, 1, 0.5f) } };

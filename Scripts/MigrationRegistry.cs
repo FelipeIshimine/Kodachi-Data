@@ -2,9 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
-using UnityEngine;
-using KodachiGames.Persistence;
 
 namespace KodachiGames.Data
 {
@@ -88,29 +85,13 @@ namespace KodachiGames.Data
             _migrators = migrators;
         }
 
-        static readonly MethodInfo LoadTypedOpenGeneric = typeof(TypeMigrationInfo)
-            .GetMethod(nameof(LoadTypedAsync), BindingFlags.NonPublic | BindingFlags.Static);
+        internal Type TypeOf(int storedVersion) =>
+            storedVersion == CurrentVersion ? _currentType : _versionedTypes[storedVersion];
 
-        static async Awaitable<object> LoadTypedAsync<T>(IPersistenceBackend backend, string key, CancellationToken ct)
-            => await backend.LoadAsync<T>(key, ct);
-
-        // Loads the blob as the stored version type, then walks the chain up to current.
-        internal async Awaitable<object> LoadAndMigrateAsync(IPersistenceBackend backend, string key, int storedVersion, CancellationToken ct)
+        internal object Migrate(object data, int storedVersion)
         {
-            var storedType = storedVersion == CurrentVersion
-                ? _currentType
-                : _versionedTypes[storedVersion];
-
-            var loadMethod = LoadTypedOpenGeneric.MakeGenericMethod(storedType);
-            var data = await (Awaitable<object>)loadMethod.Invoke(null, new object[] { backend, key, ct });
-
-            // Walk the chain: V1 → V2 → ... → current
             for (int v = storedVersion; v < CurrentVersion; v++)
-            {
-                var migrator = _migrators[data.GetType()];
-                data = migrator.Invoke(null, new[] { data });
-            }
-
+                data = _migrators[data.GetType()].Invoke(null, new[] { data });
             return data;
         }
     }

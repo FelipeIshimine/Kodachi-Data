@@ -136,6 +136,16 @@ namespace KodachiGames.Data
         public async Awaitable<byte[]> LoadProfileBytesAsync(string key, CancellationToken ct = default)
             => await _backend.ReadAsync(_context.ProfileDataKey(key), ct);
 
+        public async Awaitable DeleteProfileDataAsync(string key, CancellationToken ct = default)
+        {
+            await _backend.DeleteAsync(_context.ProfileDataKey(key), ct);
+            await _backend.DeleteAsync(_context.ProfileDataKey(key) + VersionSuffix, ct);
+            var index = await GetProfileDataIndexAsync(ct);
+            if (!index.Contains(key)) return;
+            index.Remove(key);
+            await WriteAsync(_context.ProfileDataIndexKey, index, ct);
+        }
+
         // --- SessionData ---
 
         public async Awaitable SaveSessionDataAsync<T>(T data, CancellationToken ct = default) where T : ISaveData

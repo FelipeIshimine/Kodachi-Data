@@ -5,7 +5,8 @@
         "KodachiGames.Data",
         "KodachiGames.Persistence",
         "UnityServiceLocator",
-        "KodachiGames.Markdown.Editor"
+        "KodachiGames.Markdown.Editor",
+        "SelectorAttributes"
     ],
     "includePlatforms": [
         "Editor"

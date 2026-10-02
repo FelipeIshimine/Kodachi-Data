@@ -233,5 +233,5 @@ Index objects (`ProfileIndex`, `SessionIndex`, `ProfileDataIndex`) are not versi
 
 ## Dependencies
 
-- `com.kodachigames.persistence` — provides `IPersistenceBackend`.
-- `UnityServiceLocator` — for service registration.
+- [`com.kodachigames.persistence`](../Kodachi-Persistence/README.md)
+- `UnityServiceLocator`

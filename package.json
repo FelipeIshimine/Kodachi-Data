@@ -9,8 +9,8 @@
   },
   "dependencies": {
     "com.kodachigames.persistence": "0.2.0",
-    "com.kodachigames.markdown": "0.1.0",
-    "com.felipe-ishimine.selector-attributes": "1.1.1",
-    "com.felipe-ishimine.unity-service-locator": "1.0.0"
+    "com.kodachigames.markdown": "0.4.0",
+    "com.felipe-ishimine.selector-attributes": "1.3.1",
+    "com.felipe-ishimine.unity-service-locator": "1.0.1"
   }
 }

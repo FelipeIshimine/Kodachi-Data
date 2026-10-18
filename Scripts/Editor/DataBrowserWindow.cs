@@ -104,9 +104,6 @@ namespace KodachiGames.Data.Editor
             {
                 await RefreshInternalAsync();
             }
-            catch (OperationCanceledException)
-            {
-            }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -258,9 +255,6 @@ namespace KodachiGames.Data.Editor
                 IDataBrowserPreview preview = _previews.FirstOrDefault(p => p.CanPreview(bytes));
                 _valuePane.Add(preview != null ? preview.CreatePreview(fullKey, bytes) : TextView(Describe(bytes)));
             }
-            catch (OperationCanceledException)
-            {
-            }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -278,9 +272,6 @@ namespace KodachiGames.Data.Editor
                 await delete();
                 Debug.Log($"[Data Browser] Deleted '{fullKey}' from {_sourceField.value}.");
                 await RefreshInternalAsync();
-            }
-            catch (OperationCanceledException)
-            {
             }
             catch (Exception e)
             {
